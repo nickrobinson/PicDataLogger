@@ -61,8 +61,8 @@ void setup(void) {
     // Configure the oscillator to use a 16 MHz input.
     OSCCONbits.IRCF = 111;
 
-    // Set all of the pins on Port A to be outputs,
-    // Cleared bits are outputs.
+    // Set port RA1 to be an input
+    // Set RA0(LED1) to low
     TRISA = 0x02;
     ANSELAbits.ANSA1 = 0;
     PORTAbits.RA0 = 0;
@@ -71,13 +71,9 @@ void setup(void) {
 // This function is called repeatedly
 void loop(void) {
 
-    // Turn the LED on
+    // Turn the LED on if button is pressed
     if(PORTAbits.RA1 == 1)
     	PORTAbits.RA0 = 0;
     else
         PORTAbits.RA0 = 1;
-}
-
-unsigned int is_pressed(void)
-{
 }
