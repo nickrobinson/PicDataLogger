@@ -72,10 +72,10 @@ void setup(void) {
 void loop(void) {
 
     // Turn the LED on if button is pressed
-    if(PORTAbits.RA1 == 1)
-    	PORTAbits.RA0 = 0;
+    if(isPressed() == '1')
+    	PORTAbits.RA0 = 1;
     else
-        PORTAbits.RA0 = 1;
+        PORTAbits.RA0 = 0;
 }
 
 // Debouncing function
@@ -83,11 +83,11 @@ unsigned char isPressed(void)
 {
 	int i;
 
-	if(PORTAbits.RA1 == 1)
+	if(PORTAbits.RA1 == 0)
 	{
 		for(i=0; i < 255; i++);
 
-		if(PORTAbits.RA1 == 1)
+		if(PORTAbits.RA1 == 0)
 		{
 			return '1';
 		}
@@ -98,6 +98,6 @@ unsigned char isPressed(void)
 	}
 	else
 	{
-		return 0;
+		return '0';
 	}
 }
