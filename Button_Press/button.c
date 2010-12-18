@@ -33,6 +33,7 @@
 void main (void);
 void setup(void);
 void loop(void);
+unsigned char isPressed(void);
 
 
 /////////////////////////////////////////////////////////////////////////////
@@ -75,4 +76,28 @@ void loop(void) {
     	PORTAbits.RA0 = 0;
     else
         PORTAbits.RA0 = 1;
+}
+
+// Debouncing function
+unsigned char isPressed(void)
+{
+	int i;
+
+	if(PORTAbits.RA1 == 1)
+	{
+		for(i=0; i < 255; i++);
+
+		if(PORTAbits.RA1 == 1)
+		{
+			return '1';
+		}
+		else
+		{
+			return '0';
+		}
+	}
+	else
+	{
+		return 0;
+	}
 }
