@@ -132,4 +132,6 @@ void loop(void) {
 	PORTAbits.RA0 = 1;
     for(i = 0; i < 30000; i++);
 	PORTAbits.RA0 = 0;
+
+	Sleep();
 }
