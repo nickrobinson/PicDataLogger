@@ -119,7 +119,7 @@ void setup(void) {
 	OpenTimer0( T0_16BIT &
 				T0_SOURCE_INT &
 				T0_EDGE_RISE &
-				T0_PS_1_4 &
+				T0_PS_1_8 &
 				TIMER_INT_ON &
 				TIMER_INT_OFF);
 }
