@@ -34,7 +34,45 @@
 void main (void);
 void setup(void);
 void loop(void);
+void rx_handler(void);
 
+#pragma code rx_interrupt = 0x8
+void rx_int (void)
+{
+  _asm goto rx_handler _endasm
+}
+#pragma code
+
+#pragma interrupt rx_handler
+void rx_handler(void)
+{
+	// Temporary storage variables
+    unsigned char data;
+    char buffer[40];
+
+    // Check if the serial port has overflown, and clear the event if that happened.
+    if (RCSTAbits.OERR) {
+      RCSTA1bits.CREN = 0;
+      RCSTA1bits.CREN = 1;
+    }
+
+    // Check if there is serial data waiting for us
+    if(DataRdy1USART()) {
+        data = RCREG1;
+		switch(data) {
+			case 't':
+				sprintf(buffer,"LED toggled\n\r");
+           	    puts1USART(buffer);
+				PORTAbits.RA0 = !PORTAbits.RA0;
+				break;
+			default:
+				break;	
+		}
+	
+	}
+	/* Clear the interrupt flag */
+    PIR1bits.RCIF = 0;
+}
 /////////////////////////////////////////////////////////////////////////////
 // Function definitions
 // Define any user functions that you want to use here
@@ -63,7 +101,8 @@ void setup(void) {
     // Set port RA1 to be an input
     // Set RA0(LED1) to low
     TRISA = 0x0;
-    ANSELAbits.ANSA1 = 0;
+	LATA = 0;
+    ANSELAbits.ANSA0 = 0;
     PORTAbits.RA0 = 0;
 	
 	// Serial port configuration
@@ -73,46 +112,35 @@ void setup(void) {
 
     // Configure the serial port to run at 9600 baud
     // (see manual, page 275)
-    BAUD1CONbits.BRG16 = 0;
-    SPBRG1 = 25;
-    TXSTA1bits.BRGH = 0;      // Baud rate select
+    //BAUD1CONbits.BRG16 = 0;
+    //SPBRG1 = 25;
+    //TXSTA1bits.BRGH = 0;      // Baud rate select
 
-    RCSTA1bits.CREN = 1;      // Enable receive mode on the serial port
+    //RCSTA1bits.CREN = 1;      // Enable receive mode on the serial port
 
     // Turn on the serial port
-    TXSTA1bits.TXEN = 1;      // Enable transmitter
-    RCSTA1bits.SPEN = 1;      // Enable receiver
+    //TXSTA1bits.TXEN = 1;      // Enable transmitter
+    //RCSTA1bits.SPEN = 1;      // Enable receiver
+
+	Open1USART (USART_TX_INT_OFF &
+             USART_RX_INT_ON &
+             USART_ASYNCH_MODE &
+             USART_EIGHT_BIT &
+             USART_CONT_RX &
+             USART_BRGH_LOW, 25);
+
+	/* Enable interrupt priority */
+    RCONbits.IPEN = 1;
+
+    /* Make receive interrupt high priority */
+    IPR1bits.RCIP = 1;
+
+    /* Enable all high priority interrupts */
+    INTCONbits.GIEH = 1;
 }
 
 // This function is called repeatedly
 void loop(void) {
-	// Temporary storage variables
-    unsigned char data;
-    char buffer[40];
-
-    // Check if the serial port has overflown, and clear the event if that happened.
-    if (RCSTAbits.OERR) {
-      RCSTA1bits.CREN = 0;
-      RCSTA1bits.CREN = 1;
-    }
-
-    // Check if there is serial data waiting for us
-    if(PIR1bits.RC1IF) {
-        data = RCREG1;
-		switch(data) {
-			case 'd':
-				sprintf(buffer,"LED disabled\n\r");
-           	    puts1USART(buffer);
-				PORTAbits.RA0 = 0;
-				break;
-			case 'e':
-				sprintf(buffer,"LED enabled\n\r");
-           	    puts1USART(buffer);
-				PORTAbits.RA0 = 1;
-				break;
-			default:
-				break;	
-		}
-	
-	}
+	/* Put into sleep mode to save power */
+	Sleep();
 }
