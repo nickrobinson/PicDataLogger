@@ -6,6 +6,8 @@
 
 #include <p18lf25k22.h>	    // This file includes definitions for all of the
                             // registers on our chip
+#include <stdio.h>			// For the sprintf() function
+#include <usart.h>			// For communication with computer
 
 /////////////////////////////////////////////////////////////////////////////
 // Pragma statements
@@ -32,8 +34,45 @@
 void main (void);
 void setup(void);
 void loop(void);
+void rx_handler(void);
 
+#pragma code rx_interrupt = 0x8
+void rx_int (void)
+{
+  _asm goto rx_handler _endasm
+}
+#pragma code
 
+#pragma interrupt rx_handler
+void rx_handler(void)
+{
+	// Temporary storage variables
+    unsigned char data;
+    char buffer[40];
+
+    // Check if the serial port has overflown, and clear the event if that happened.
+    if (RCSTAbits.OERR) {
+      RCSTA1bits.CREN = 0;
+      RCSTA1bits.CREN = 1;
+    }
+
+    // Check if there is serial data waiting for us
+    if(DataRdy1USART()) {
+        data = RCREG1;
+		switch(data) {
+			case 't':
+				sprintf(buffer,"LED toggled\n\r");
+           	    puts1USART(buffer);
+				PORTAbits.RA0 = !PORTAbits.RA0;
+				break;
+			default:
+				break;	
+		}
+	
+	}
+	/* Clear the interrupt flag */
+    PIR1bits.RCIF = 0;
+}
 /////////////////////////////////////////////////////////////////////////////
 // Function definitions
 // Define any user functions that you want to use here
@@ -59,36 +98,49 @@ void setup(void) {
     // Configure the oscillator to use a 16 MHz input.
     OSCCONbits.IRCF = 111;
 
+    // Set port RA1 to be an input
     // Set RA0(LED1) to low
     TRISA = 0x0;
 	LATA = 0;
     ANSELAbits.ANSA0 = 0;
     PORTAbits.RA0 = 0;
 	
-	// PWM Period = 4 x Tosc x (PR2 + 1) x TMR2 Prescale Value
-	// Setup RC2/CCP1 for PWM
-	PORTC = 0x00;
-	TRISCbits.RC2 = 0;		//Step 1 - Corresponding TRIS bit must be cleared
-	CCPTMRS0bits.C1TSEL = 0b00; //Step 2 - Choose timer source (00 for timer 2)
-	PR2 = 250;	//Step 3 - Load selected timer with PWM value
-	CCP1CONbits.CCP1M = 0b1100; //Step 4 - Configure CCP module to enable PWM instead of compare
-	CCP1CONbits.DC1B = 0; //Step 5 - Configure lowest 2 bytes of duty cycle
-	CCPR1L = 0; //Step 6 - 0 initial duty cycle
-	TMR2 = 0; //Step 7 - Initialize timer to 0
-	T2CONbits.TMR2ON = 1; //Step 8 - Turn Timer ON
-	
+	// Serial port configuration
+    TRISCbits.TRISC6 = 0;	  // Make TX pin an output
+    TRISCbits.TRISC7 = 1;	  // and RX pin an input
+    ANSELCbits.ANSC7 = 0;     // Specifically, an analog input
+
+    // Configure the serial port to run at 9600 baud
+    // (see manual, page 275)
+    //BAUD1CONbits.BRG16 = 0;
+    //SPBRG1 = 25;
+    //TXSTA1bits.BRGH = 0;      // Baud rate select
+
+    //RCSTA1bits.CREN = 1;      // Enable receive mode on the serial port
+
+    // Turn on the serial port
+    //TXSTA1bits.TXEN = 1;      // Enable transmitter
+    //RCSTA1bits.SPEN = 1;      // Enable receiver
+
+	Open1USART (USART_TX_INT_OFF &
+             USART_RX_INT_ON &
+             USART_ASYNCH_MODE &
+             USART_EIGHT_BIT &
+             USART_CONT_RX &
+             USART_BRGH_LOW, 25);
+
+	/* Enable interrupt priority */
+    RCONbits.IPEN = 1;
+
+    /* Make receive interrupt high priority */
+    IPR1bits.RCIP = 1;
+
+    /* Enable all high priority interrupts */
+    INTCONbits.GIEH = 1;
 }
 
 // This function is called repeatedly
 void loop(void) {
-	int duty_cycle = 0x00;
-	int i = 0;
-	CCPR1L = duty_cycle;
-	
-	for(duty_cycle = 0x00; duty_cycle < 0xFF; duty_cycle++)
-	{
-		for(i=0; i < 10000; i++);
-		CCPR1L = duty_cycle;
-	}	
-	
+	/* Put into sleep mode to save power */
+	Sleep();
 }
